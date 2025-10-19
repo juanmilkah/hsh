@@ -1,89 +1,69 @@
-#include "main.h"
+#include <shell.h>
+#include <utils.h>
+#include <unistd.h>
+#include <string.h>
+#include <stdlib.h>
+#include <fcntl.h>
 
-void signalHandler(int sig)
+/**
+ * readContents - reads the contents of a file descriptor
+ * @fd: file descriptor
+ * Return: pointer to the contents or NULL on failure
+ */
+static char *readContents(int fd)
 {
-	(void) sig;
-	write(STDOUT_FILENO, "\n$ ", 3);
+	char tmp[1024];
+	char *contents;
+	ssize_t size, n = 0;
+
+	contents = NULL;
+	while ((size = read(fd, tmp, sizeof(tmp))) > 0) {
+		n += size;
+		contents = realloc(contents, n + 1);
+		if (contents == NULL) {
+			fdprint(STDERR_FILENO, "Error: malloc failed\n");
+			return NULL;
+		}
+		strncpy(contents + n - size, tmp, size);
+	}
+	contents[n] = '\0';
+	if (size < 0) {
+		fdprint(STDERR_FILENO, "Error: Can't read file\n");
+		return NULL;
+	}
+	return contents;
 }
-int main(int argc, char *argv[])
+/**
+ * runFile - runs the shell with the contents of a file descriptor
+ * @fd: file descriptor
+ * Return: exit status
+ */
+static int runFile(int fd)
 {
-	char **path, **commands, *lineptr, *paths;
-	envlist_t *envlist = NULL;
-	size_t n = 0;
-	ssize_t num;
-        int executed, i, fd, j = 0;
+	char *contents = readContents(fd);
+	if (!contents) {
+		close(fd);
+		exit(127);
+	}
+	return loop(contents);
+}
 
-	signal(SIGINT, signalHandler);
-	create_envlist(&envlist);
-	paths = _getenv("PATH", envlist);
-	path = strtow(paths, ':');
-	if (argc > 1 || !isatty(STDIN_FILENO))
-	{
-		lineptr = NULL;
-                if (argc > 1)
-                {
-                        fd = open(argv[1], O_RDONLY);
-                        if (fd == -1)
-                        {
-                                printerr("%s: %d: Can't open %s\n",argv[0], 0, argv[1]);
-		                free_vec(path);
-		                free_list(envlist);
-                                exit(127);
-                        }
-                }
-                else
-                        fd = STDIN_FILENO;
-		num = _getline(&lineptr, &n, fd);
-                if (num == 0)
-                {
-                        free(lineptr);
-                        free_vec(path);
-		        free_list(envlist);
-                        exit(0);
-                }
-		commands = strtow(lineptr, '\n');
-		free(lineptr);
-		for (i = 0; commands[i]; i++)
-		{
-                        executed = execute(commands[i], num, path, &envlist, argv[0], i + 1, commands);
-                        if (executed == -1)
-                                break;
-                        if (executed == 1 || !executed)
-                                continue;
-                        if (executed == 2)
-                        {
-                                i++;
-                                while (commands[i])
-                                {
-                                        free(commands[i]);
-                                        i++;
-                                }
-                                free(commands);
-		                free_vec(path);
-		                free_list(envlist);
-                                exit(2);
-                        }
+int main(int argc, char **argv)
+{
+	if (argc > 2) {
+		fdprint(STDERR_FILENO, "Usage: %s [filename]", argv[0]);
+		return (127);
+	} else if (argc == 2) {
+		int fd = open(argv[1], O_RDONLY);
+		if (fd < 0) {
+			fdprint(STDERR_FILENO, "Error: open failed\n");
+			exit(127);
 		}
-                free(commands);
-		free_vec(path);
-		free_list(envlist);
+		return (runFile(fd));
+	} else if (!isatty(STDIN_FILENO)) {
+		return (runFile(STDIN_FILENO));
+	} else {
+		return (loop(NULL));
 	}
-	else
-	{
-		for (;;)
-		{
-                        j++;
-			write(1, "$ ", 2);
-			lineptr = NULL;
-			num = _getline(&lineptr, &n, STDIN_FILENO);
-                        executed = execute(lineptr, num, path, &envlist, argv[0], j, NULL);
-                        if (executed == -1)
-                                break;
-                        if (executed == 1 || !executed)
-                                continue;
-		}
-		if (executed == -1)
-			write(1, "\n", 1);
-	}
-	exit(0);
+	return (0);
 }

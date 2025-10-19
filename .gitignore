@@ -52,3 +52,5 @@ Mkfile.old
 dkms.conf
 # vscode
 .vscode
+.cache/
+compile_commands.json
