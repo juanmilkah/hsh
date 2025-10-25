@@ -19,35 +19,34 @@ void freevec(char **vector)
 	free(tmp);
 }
 
-static void flush(int fd, char *buffer, int *len)
+void free_tokens(Token *head)
 {
-	if (*len >= BUFFER_SIZE) {
-		write(fd, buffer, *len);
-		*len = 0;
+	Token *current = head;
+	Token *next;
+
+	while (current != NULL) {
+		next = current->next;
+		if (current->type == TOKEN_WORD ||
+		    current->type == TOKEN_ASSIGNMENT_WORD)
+			free(current->lexeme);
+		free(current);
+		current = next;
 	}
 }
 
-void fdprint(int fd, const char *format, ...)
+void free_command(Command *command)
 {
-	va_list args;
-	char buffer[BUFFER_SIZE];
-	int len = 0;
-	bool time_to_format = false;
+	if (command == NULL)
+		return;
 
-	va_start(args, format);
-	while (*format) {
-		if (time_to_format) {
-			char *s = va_arg(args, char *);
-			for (int i = 0; s[i]; i++) {
-				flush(fd, buffer, &len);
-				buffer[len++] = s[i];
-			}
-			time_to_format = false;
-			continue;
-		} else if (*format == '%') {
-			time_to_format = true;
-		}
-		buffer[len++] = *format;
-		format++;
+	if (command->type == CMD_SIMPLE) {
+		freevec(command->as.command.argv);
+		freevec(command->as.command.envp);
+		free(command->as.command.input_file);
+		free(command->as.command.output_file);
+	} else {
+		free_command(command->as.binary.left);
+		free_command(command->as.binary.right);
 	}
+	free(command);
 }

@@ -4,7 +4,7 @@
 #include <tokenizer.h>
 #include <parser.h>
 
-void fdprint(int fd, const char *format, ...);
+void freevec(char **vector);
 
 void free_tokens(Token *head);
 

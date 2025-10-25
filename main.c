@@ -18,22 +18,32 @@ static int repl(FILE *stream)
 
 	while (true) {
 		if (shell->is_interactive_mode)
-			fdprint(STDOUT_FILENO, "$ ");
+			fprintf(stdout, "$ ");
 		nread = getline(&line, &n, stream);
 		if (nread < 0) {
 			free(line);
 			break;
 		}
 		Token *tokens = tokenize(line);
+		Token *current = tokens;
+		while (current != NULL) {
+			// For debugging: print token types and lexemes
+			fprintf(stdout, "Lexeme: %s\n", current->lexeme);
+			current = current->next;
+		}
 		free(line);
-		if (!tokens)
-			return (127);
-		Command *command = parse(tokens);
-		if (!command) {
+		if (shell->fatal_error) {
 			free_tokens(tokens);
 			return (127);
 		}
+		Command *command = parse(tokens);
+		free_tokens(tokens);
 		execute(command);
+		free_command(command);
+		if (shell->fatal_error) {
+			free_command(command);
+			return (127);
+		}
 		line = NULL;
 	}
 	return (0);
@@ -43,7 +53,7 @@ int main(int argc, char **argv)
 {
 	shell = malloc(sizeof(ShellState));
 	if (!shell) {
-		fdprint(STDERR_FILENO, "Error: malloc failed\n");
+		fprintf(stderr, "Error: malloc failed\n");
 		return (127);
 	}
 
@@ -51,13 +61,13 @@ int main(int argc, char **argv)
 	shell->is_interactive_mode = true;
 
 	if (argc > 2) {
-		fdprint(STDERR_FILENO, "Usage: %s [streamname]", argv[0]);
+		fprintf(stderr, "Usage: %s [streamname]", argv[0]);
 		return (127);
 	} else if (argc == 2) {
 		FILE *stream = fopen(argv[1], "r");
 		shell->is_interactive_mode = false;
 		if (!stream) {
-			fdprint(STDERR_FILENO, "Error: cannot open stream %s\n",
+			fprintf(stderr, "Error: cannot open stream %s\n",
 				argv[1]);
 			return (127);
 		}
