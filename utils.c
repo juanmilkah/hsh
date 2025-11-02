@@ -40,10 +40,8 @@ void free_command(Command *command)
 		return;
 
 	if (command->type == CMD_SIMPLE) {
-		freevec(command->as.command.argv);
-		freevec(command->as.command.envp);
-		free(command->as.command.input_file);
-		free(command->as.command.output_file);
+		free(command->as.command.argv);
+		free(command->as.command.envp);
 	} else {
 		free_command(command->as.binary.left);
 		free_command(command->as.binary.right);

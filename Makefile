@@ -1,7 +1,7 @@
 CC := gcc
 CFLAGS := -Wall -Werror -Wextra -pedantic -Iinclude -std=gnu11 -O2
 TARGET := hsh
-DEBUGFLAGS := -g -O0
+DEBUGFLAGS := -g -O0 -DDEBUG
 
 SRCS := $(wildcard *.c)
 OBJS := $(SRCS:.c=.o)
