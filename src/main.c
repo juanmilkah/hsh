@@ -1,6 +1,10 @@
+#include "history.h"
 #include "shell.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
+
+#define HIST_PATH ".hsh_history"
 
 int main(int argc, char **argv)
 {
@@ -12,12 +16,23 @@ int main(int argc, char **argv)
 	char *name = argc == 1 ? argv[0] : argv[1];
 	bool is_interactive = (argc == 1 && isatty(STDIN_FILENO));
 
-	ShellState *shell = shell_init(name, is_interactive);
+	ShellState *shell = shell_init(name, is_interactive, HIST_PATH);
 
 	if (!shell) {
-		fprintf(stderr, "Error: malloc failed\n");
+		fprintf(stderr, "ERROR: Shell Init failed\n");
 		return 127;
 	}
+
+	const char *commands[] = { "Hello", "mike", "angelo" };
+	for (int i = 0; i < 3; i++) {
+		history_push(shell->history, commands[i]);
+	}
+	puts("Done push");
+
+	for (int i = 3; i > 0; i--) {
+		printf("%s\n", history_prev(shell->history));
+	}
+	exit(0);
 
 	if (argc == 2) {
 		FILE *stream = fopen(argv[1], "r");

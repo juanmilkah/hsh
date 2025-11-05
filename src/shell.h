@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <stdio.h>
+#include "history.h"
 
 typedef struct ShellState {
 	bool fatal_error;
@@ -10,9 +11,10 @@ typedef struct ShellState {
 	bool had_error;
 	char *name;
 	int line_number;
+	command_history *history;
 } ShellState;
 
-ShellState *shell_init(char *name, bool is_interactive);
+ShellState *shell_init(char *name, bool is_interactive, const char *hist_path);
 void shell_free(ShellState *shell);
 void shell_repl(ShellState *shell, FILE *stream);
 

@@ -1,6 +1,7 @@
 #include "shell.h"
 #include "command.h"
 #include "executor.h"
+#include "history.h"
 #include "lexer.h"
 #include "parser.h"
 #include "token.h"
@@ -13,7 +14,7 @@
  *
  * Return: Pointer to the initialized ShellState structure, or NULL on failure.
  */
-ShellState *shell_init(char *name, bool is_interactive)
+ShellState *shell_init(char *name, bool is_interactive, const char *hist_path)
 {
 	ShellState *shell = malloc(sizeof(ShellState));
 	if (!shell)
@@ -24,6 +25,10 @@ ShellState *shell_init(char *name, bool is_interactive)
 	shell->is_interactive_mode = is_interactive;
 	shell->line_number = 0;
 	shell->name = name;
+	command_history *hist = history_init(hist_path);
+	if (!hist)
+		return NULL;
+	shell->history = hist;
 	return shell;
 }
 /**
@@ -57,6 +62,8 @@ start:
 			free(line);
 			break;
 		}
+
+		history_push(shell->history, line);
 
 		Token *tokens = tokenize(shell, line);
 		free(line);
